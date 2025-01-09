@@ -3,57 +3,92 @@
 #include <string.h>
 #include <stdbool.h>
 typedef enum tokType {
-    class,
-    brack,
-    bin,
-    count,
-    end
+    normal,
+    meta,
+    init,
+    rep
 } tokType;
-typedef struct charToken {
-    bool any;
-    bool neg;
-    char* class;
-    struct charToken* next;
-} charToken;
 typedef struct token {
     tokType type;
-    int minChar;
-    int maxChar;
-    char c;
-    charToken* class;
+    char* class;
+    int minRep;
+    int maxRep;
     struct token* next;
 } token;
-
-token* newToken(tokType type,int minChar,int maxChar,char c){
+token* newToken(tokType type,char* class,int minRep,int maxRep){
     token* a=malloc(sizeof(token));
     if(a!=NULL){
         a->type=type;
-        a->minChar=minChar;
-        a->maxChar=maxChar;
-        a->c=c;
-        a->class=NULL;
+        a->class=class;
         a->next=NULL;
+        a->minRep=minRep;
+        a->maxRep=maxRep;
     }
     return a;
 }
-void addToken(token* a, tokType type,int minChar,int maxChar, char c){
+void addToken(token* a,tokType type,char* class,int minRep,int maxRep){
+    if(a==NULL)
+        return;
     while(a->next!=NULL){
         a=a->next;
     }
-    a->next=newToken(type,minChar,maxChar,c);
+    a->next=newToken(type,class,minRep,maxRep);
 }
-void addClass(token* a,bool any, bool neg,char* class){
-    charToken* b=malloc(sizeof(charToken));
-    b->any=any;
-    b->neg=neg;
-    b->class=class;
-    if(a->class==NULL){
-        a->class=b;
-        return;
+bool isMeta(char* regex, int i){
+    if(i>0 && regex[i-1]=='\\'){
+        if((i>1 && regex[i-2]!='\\') || i<=1)
+            return false;
     }
-    charToken* c=a->class;
-    while(c->next!=NULL){
-        c=c->next;
+    else if(regex[i]=='\\')
+        return true;
+    else if(regex[i]=='(' || regex[i]==')')
+        return true;
+    else if(regex[i]=='[' || regex[i]==']')
+        return true;
+    if(regex[i]=='{' || regex[i]=='}')
+        return true;
+    if(regex[i]=='.' || regex[i]=='$' || regex[i]=='*')
+        return true;
+    else
+        return false;
+}
+char* char2str(char c){
+    char* o=malloc(2);
+    o[0]=c;
+    o[1]=0;
+    return o;
+}
+int scanCharClass(char* regex, int i,token* a){
+    i++;
+    char* tmpStr=malloc(strlen(regex)+1);
+    strncpy(tmpStr,"",strlen(regex)+1);
+    int extI=0;
+    while(regex[i]!=']' && regex[i]!='\0'){
+        tmpStr[extI]=regex[i];
+        i++;
+        extI++;
     }
-    c->next=b;
+    addToken(a,normal,tmpStr,1,1);
+    return i;
+}
+int main(){
+    char* regex="asdsad[ asdas]d";
+    int i=0;
+    token* a=newToken(init,NULL,0,0);
+    while(regex[i]!=0){
+        if(!isMeta(regex,i))
+            addToken(a,normal,char2str(regex[i]),1,1);
+        else if(regex[i]!='[' && regex[i]!=']' && regex[i]!='{' && regex[i]!='}')
+            addToken(a,meta,char2str(regex[i]),1,1);
+        else if(regex[i]=='[')
+            i=scanCharClass(regex,i,a);
+
+        i++;
+    }
+
+    while(a!=NULL){
+        if(a->type==normal)
+            printf("%s\n",a->class);
+        a=a->next;
+    }
 }
