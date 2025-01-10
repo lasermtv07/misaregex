@@ -1,3 +1,4 @@
+#pragma once
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -71,8 +72,33 @@ int scanCharClass(char* regex, int i,token* a){
     addToken(a,normal,tmpStr,1,1);
     return i;
 }
-int main(){
-    char* regex="asdsad[ asdas]d";
+int scanCount(char* regex,int i, token* a){
+    i++;
+    char* min=malloc(strlen(regex)+1);
+    char* max=malloc(strlen(regex)+1);
+    strncpy(min,"",strlen(regex)+1);
+    strncpy(max,"",strlen(regex)+1);
+    int extI=0;
+    bool sw=false;
+    while(regex[i]!='}' && regex[i]!='\0'){
+        if(regex[i]==','){
+            extI=0;
+            sw=true;
+            i++;
+        }
+        if(!sw)
+            min[extI]=regex[i];
+        else
+            max[extI]=regex[i];
+        i++;
+        extI++;
+    }
+    addToken(a,rep,NULL,atoi(min),atoi(max));
+    free(min);
+    free(max);
+    return i;
+}
+token* tokenize(char* regex){
     int i=0;
     token* a=newToken(init,NULL,0,0);
     while(regex[i]!=0){
@@ -82,13 +108,10 @@ int main(){
             addToken(a,meta,char2str(regex[i]),1,1);
         else if(regex[i]=='[')
             i=scanCharClass(regex,i,a);
+        else if(regex[i]=='{')
+            i=scanCount(regex,i,a);
 
         i++;
     }
-
-    while(a!=NULL){
-        if(a->type==normal)
-            printf("%s\n",a->class);
-        a=a->next;
-    }
+    return a;
 }
